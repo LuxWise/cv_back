@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <title>Register </title>
+</head>
+
+<body style="margin:0;padding:0;background-color:#f5f8ff;">
+    <!-- Full width wrapper -->
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+        style="background-color:#f5f8ff;">
+        <tr>
+            <td align="center" style="padding:24px 12px;">
+
+                <!-- Container -->
+                <table role="presentation" width="640" cellspacing="0" cellpadding="0" border="0" style="width:640px;max-width:640px;background:#ffffff;border-radius:16px;overflow:hidden;
+                box-shadow:0 10px 30px rgba(16,24,40,0.10);font-family:Arial,Helvetica,sans-serif;">
+
+                    <!-- Header -->
+                    <tr>
+                        <td style="background:#0b5cff;padding:22px 24px;">
+                            <div style="color:#ffffff;font-size:18px;letter-spacing:0.4px;font-weight:700;">
+                                Register
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Body -->
+                    <tr>
+                        <td style="padding:22px 24px 10px 24px;">
+                            <div style="font-size:14px;line-height:1.5;color:#1f2937;">
+                                Hello, <br />
+                                Thank you for registering. Please use the following code to complete your registration:
+                            </div>
+
+                            <!-- OK STATE (show when status = OK) -->
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                                style="margin-top:16px;border:1px solid #cfe1ff;background:#f3f7ff;border-radius:12px;">
+                                <tr>
+                                    <td style="padding:16px 16px;">
+                                        <div style="font: size 16px;font-weight:800;color:#0b5cff;">
+                                            ✅ Your registration code is: <span
+                                                style="display:inline-block;margin-top:8px;padding:8px 12px;background:#e6eeff;border-radius:8px;font-size:20px;letter-spacing:2px;">
+                                                {{ code }}
+                                            </span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Divider -->
+                            <div style="height:1px;background:#e6eeff;margin:18px 0;"></div>
+
+                            <!-- Compact info -->
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                                style="margin-bottom:6px;">
+                                <tr>
+                                    <td style="font-size:12px;color:#475467;padding:4px 0;">
+                                        Service: <span style="font-weight:700;color:#0b5cff;">Request service</span>
+                                    </td>
+                                    <td align="right" style="font-size:12px;color:#475467;padding:4px 0;">
+                                        Region: <span style="font-weight:700;color:#0b5cff;">Colombia</span>
+                                    </td>
+                                </tr>
+                            </table>
+
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding:14px 24px 18px 24px;background:#f7faff;border-top:1px solid #e6eeff;">
+                            <div style="font-size:11px;color:#667085;line-height:1.5;">
+                                This message was generated automatically by the monitoring system.
+                                If you believe this is a false positive, please check logs and retries.
+                            </div>
+                        </td>
+                    </tr>
+
+                </table>
+                <!-- /Container -->
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

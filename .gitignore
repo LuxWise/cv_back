@@ -1,0 +1,59 @@
+########################
+# Entornos virtuales
+########################
+venv/
+venv_cv/
+.venv/
+
+########################
+# Archivos de entorno / secrets
+########################
+.env
+.env.*
+env/
+
+########################
+# Python
+########################
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+
+########################
+# Logs y cachés
+########################
+*.log
+logs/
+.mypy_cache/
+.pytest_cache/
+.cache/
+htmlcov/
+.coverage
+.coverage.*
+
+########################
+# IDE / editor
+########################
+.vscode/
+.idea/
+*.swp
+*~
+
+########################
+# Sistema operativo
+########################
+.DS_Store
+Thumbs.db
+
+
+########################
+# Otros
+########################
+keys/
+*.pem
