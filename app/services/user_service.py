@@ -89,12 +89,15 @@ async def register(db: Session, user: UserRegister):
 
         return code
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
+        print(e)
         db.rollback()
         raise HTTPException(status_code=500, detail="Error processing registration.")
     except HTTPException as http_exc:
+        print(http_exc)
         raise http_exc
-    except Exception:
+    except Exception as e:
+        print(e)
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal Server Error during registration")
     
@@ -151,10 +154,12 @@ async def confirm_registration(db: Session, code: str):
 
         return registered_user
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
+        print(e)
         db.rollback()
         raise HTTPException(status_code=500, detail="Error confirming registration.")
     except HTTPException as http_exc:
+        print(http_exc)
         db.rollback()
         raise http_exc
     except Exception as e:
