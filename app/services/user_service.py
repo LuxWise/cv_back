@@ -42,8 +42,6 @@ async def register(db: Session, user: UserRegister):
             )
             .first()
         )
-        if registered_exists:
-            raise HTTPException(status_code=400, detail="Email already registered")
 
         ttl = timedelta(minutes=15)
         now = datetime.utcnow()
