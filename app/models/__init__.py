@@ -10,3 +10,4 @@ from .cv import (
     Cv_project_achievements,
     Cv_skill,
 )
+from .logs import Logging

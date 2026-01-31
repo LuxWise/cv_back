@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
+from app.core.logging import outboundLogging
 from app.core.security import create_register_token, hash_password
 from app.core.vault import get_url_groq_service
 from app.models.user import RegisteredUser, TwoFA, User
@@ -34,19 +35,10 @@ async def register(db: Session, user: UserRegister):
         if user_exists:
             raise HTTPException(status_code=400, detail="Email already registered")
 
-        registered_exists = (
-            db.query(RegisteredUser)
-            .filter(
-                RegisteredUser.email == user.email,
-                RegisteredUser.is_verified == True,
-            )
-            .first()
-        )
-
         ttl = timedelta(minutes=15)
         now = datetime.utcnow()
 
-        pending = (
+        pending_latest = (
             db.query(RegisteredUser)
             .filter(
                 RegisteredUser.email == user.email,
@@ -56,8 +48,8 @@ async def register(db: Session, user: UserRegister):
             .first()
         )
 
-        if pending:
-            age = now - pending.created_at
+        if pending_latest:
+            age = now - pending_latest.created_at
 
             if age < ttl:
                 raise HTTPException(
@@ -65,9 +57,19 @@ async def register(db: Session, user: UserRegister):
                     detail="A registration attempt was made recently. Please check your email for the verification code or try again later.",
                 )
 
-            # Expiró: borrar TwoFA y el registro para poder crear uno nuevo (evita UNIQUE en email/user_id)
-            db.query(TwoFA).filter(TwoFA.user_id == pending.id).delete(synchronize_session=False)
-            db.delete(pending)
+            pendings = (
+                db.query(RegisteredUser)
+                .filter(
+                    RegisteredUser.email == user.email,
+                    RegisteredUser.is_verified == False,
+                )
+                .all()
+            )
+
+            for p in pendings:
+                db.query(TwoFA).filter(TwoFA.user_id == p.id).delete(synchronize_session=False)
+                db.delete(p)
+
             db.commit()
 
         hashed_password = hash_password(user.password)
@@ -80,16 +82,13 @@ async def register(db: Session, user: UserRegister):
         )
 
         code = two_fa_generate_code(db)
+
         two_fa_entry = TwoFA(
             code=code,
             enabled=False,
             user=db_user_register,
         )
-        
-        if registered_exists:
-            db.delete(registered_exists)
-            db.commit()
-        
+
         db.add(db_user_register)
         db.add(two_fa_entry)
         db.commit()
@@ -103,19 +102,19 @@ async def register(db: Session, user: UserRegister):
         return code
 
     except SQLAlchemyError as e:
-        print(e)
         db.rollback()
         raise HTTPException(status_code=500, detail="Error processing registration.")
     except HTTPException as http_exc:
-        print(http_exc)
         raise http_exc
     except Exception as e:
-        print(e)
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal Server Error during registration")
-    
+
 async def confirm_registration(db: Session, code: str):
     try:
+        ttl = timedelta(minutes=15)
+        now = datetime.utcnow()
+
         two_fa_entry = db.query(TwoFA).filter(TwoFA.code == code).first()
         if not two_fa_entry:
             raise HTTPException(status_code=400, detail="Invalid verification code.")
@@ -124,9 +123,12 @@ async def confirm_registration(db: Session, code: str):
         if not registered_user or registered_user.is_verified:
             raise HTTPException(status_code=400, detail="Invalid verification code.")
 
-        registered_user.is_verified = True
-        db.delete(two_fa_entry)
-        db.commit()
+        created_at = getattr(two_fa_entry, "created_at", None) or getattr(registered_user, "created_at", None)
+        if not created_at or (now - created_at) > ttl:
+            raise HTTPException(status_code=400, detail="Verification code has expired.")
+
+        if db.query(User).filter(User.email == registered_user.email).first():
+            raise HTTPException(status_code=400, detail="Email already registered.")
 
         register_token = create_register_token(
             user_id=registered_user.id,
@@ -136,30 +138,36 @@ async def confirm_registration(db: Session, code: str):
             last_name=registered_user.lastname
         )
 
-        print("test:" , get_url_groq_service())
-        print("test token:" , register_token)
+        external_service_url = f"{get_url_groq_service()}/users/register/external"
+        
+        payload = {
+            "firstname": registered_user.firstname,
+            "lastname": registered_user.lastname,
+            "email": registered_user.email,
+            "password": registered_user.password,
+        }
 
-        try : 
-            async with httpx.AsyncClient() as client:
-                resp = await client.post(
-                    f"{get_url_groq_service()}/users/register/external",
-                    json={
-                        "firstname": registered_user.firstname,
-                        "lastname": registered_user.lastname,
-                        "email": registered_user.email,
-                        "password": registered_user.password,
-                    },
-                    headers={
-                        "Content-Type": "application/json",
-                        "Authorization": f"Bearer {register_token}",
-                    },
-                )
-        except httpx.HTTPError as http_err:
-            print(f"HTTP error occurred: {http_err}")
-            raise HTTPException(status_code=500, detail="Error communicating with external service.")
+        headers = {
+            "Authorization": f"Bearer {register_token}",
+            "Content-Type": "application/json",
+        }
 
-        body = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
-        if resp.status_code != 201 or body.get("status") != "success":
+        try:
+            async with outboundLogging(db, operation="Register user in external service") as client:
+                resp = await client.post(external_service_url, json=payload, headers=headers)
+
+            resp.raise_for_status()
+
+        except httpx.HTTPStatusError as http_err:
+            raise HTTPException(status_code=502, detail=f"External service error: {http_err.response.status_code}")
+        except httpx.HTTPError:
+            raise HTTPException(status_code=502, detail="Error communicating with external service.")
+
+        body = {}
+        if resp.headers.get("content-type", "").startswith("application/json"):
+            body = resp.json()
+
+        if body.get("status") != "success":
             raise HTTPException(status_code=500, detail="Error registering user in external service.")
 
         db_user = User(
@@ -170,20 +178,20 @@ async def confirm_registration(db: Session, code: str):
             api_key=body.get("api_key")
         )
         db.add(db_user)
-        db.commit()
 
+        registered_user.is_verified = True
+        db.delete(two_fa_entry)
+
+        db.commit()
         return registered_user
 
     except SQLAlchemyError as e:
-        print(e)
         db.rollback()
         raise HTTPException(status_code=500, detail="Error confirming registration.")
     except HTTPException as http_exc:
-        print(http_exc)
         db.rollback()
         raise http_exc
     except Exception as e:
-        print(e)
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal Server Error during registration confirmation")
 
