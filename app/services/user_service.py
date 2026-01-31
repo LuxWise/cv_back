@@ -136,6 +136,8 @@ async def confirm_registration(db: Session, code: str):
             last_name=registered_user.lastname
         )
 
+        print("test:" , get_url_groq_service())
+
         async with httpx.AsyncClient(timeout=20.0) as client:
             resp = await client.post(
                 f"{get_url_groq_service()}/users/register/external",
