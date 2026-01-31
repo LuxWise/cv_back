@@ -34,6 +34,17 @@ async def register(db: Session, user: UserRegister):
         if user_exists:
             raise HTTPException(status_code=400, detail="Email already registered")
 
+        registered_exists = (
+            db.query(RegisteredUser)
+            .filter(
+                RegisteredUser.email == user.email,
+                RegisteredUser.is_verified == True,
+            )
+            .first()
+        )
+        if registered_exists:
+            raise HTTPException(status_code=400, detail="Email already registered")
+
         ttl = timedelta(minutes=15)
         now = datetime.utcnow()
 
@@ -76,7 +87,11 @@ async def register(db: Session, user: UserRegister):
             enabled=False,
             user=db_user_register,
         )
-
+        
+        if registered_exists:
+            db.delete(registered_exists)
+            db.commit()
+        
         db.add(db_user_register)
         db.add(two_fa_entry)
         db.commit()
