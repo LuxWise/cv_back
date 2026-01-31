@@ -137,21 +137,26 @@ async def confirm_registration(db: Session, code: str):
         )
 
         print("test:" , get_url_groq_service())
+        print("test token:" , register_token)
 
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            resp = await client.post(
-                f"{get_url_groq_service()}/users/register/external",
-                json={
-                    "firstname": registered_user.firstname,
-                    "lastname": registered_user.lastname,
-                    "email": registered_user.email,
-                    "password": registered_user.password,
-                },
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {register_token}",
-                },
-            )
+        try : 
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    f"{get_url_groq_service()}/users/register/external",
+                    json={
+                        "firstname": registered_user.firstname,
+                        "lastname": registered_user.lastname,
+                        "email": registered_user.email,
+                        "password": registered_user.password,
+                    },
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {register_token}",
+                    },
+                )
+        except httpx.HTTPError as http_err:
+            print(f"HTTP error occurred: {http_err}")
+            raise HTTPException(status_code=500, detail="Error communicating with external service.")
 
         body = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
         if resp.status_code != 201 or body.get("status") != "success":
