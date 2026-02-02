@@ -7,10 +7,11 @@ import os
 load_dotenv()
 
 DB_HOST = os.getenv("POSTGRES_HOST")
+DB_PORT = os.getenv("POSTGRES_PORT", "5432")
 
 SQLALCHEMY_DATABASE_URL = (
     f"postgresql+psycopg2://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}"
-    f"@{DB_HOST}/{os.getenv('POSTGRES_DB')}"
+    f"@{DB_HOST}:{DB_PORT}/{os.getenv('POSTGRES_DB')}"
 )
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
